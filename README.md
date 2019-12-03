@@ -1,4 +1,4 @@
-#Redis 学习笔记
+#Redis 学习笔记  
 ###1、什么是Redis
     redis是一种基于键值对（key - value）的NoSQL数据库
 
