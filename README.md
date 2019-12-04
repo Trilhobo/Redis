@@ -100,6 +100,24 @@
     1、相同的数据集的情况下，AOF文件通常要大于RDB文件
     2、AOF的运行效率往往要低于RDB模式
     3、数据恢复的速度要低于RDB    
-        
+    
+### 12、 Pipeline
+    1、Redis客户端执行一条命令分为四个过程：发送命令，命令排队，命令执行，返回结果。这一个流程称为Round Trip Time（RTT，往返时间）  
+    2、Redis提供了批量操作命令（如mget，mset等），有效的节约了RTT。但大部分命令都不支持批量，假如要支持n次hgetall操作，那么就会增加往返的消耗  
+       Pipeline它可以将一组Redis命令进行组装，通过一次RTT传给Redis  
+          
+### 13、Redis有几种数据过期策略？
+    1、惰性删除：当客户端读取带有过期属性的key时，如果该key已经过期就执行删除操作返回空  
+    2、定时任务删除：redis内部维护一个定时任务，默认每秒运行10次（可通过配置hz控制）  
            
+### 14、内存溢出控制策略
+    1、当Redis所用内存达到maxmemory上限时会触发相应的一处控制策略。  
+##### 六种策略  
+    1、noevication：默认策略，不会删除任何数据，拒绝所有写入操作并返回客户端错误信息OOM
+    2、volatile-lru: 根据LRU算法删除设置了超时属性的键  
+    3、allkeys-lru: 根据LRU算法删除键，不管数据有没有超时属性    
+    4、volatile-random： 随机删除过期键    
+    5、allkeys-random: 随机删除所有键    
+    6、volatile-ttl： 根据键值对象的ttl属性，删除最近将要过期数据。  
+    7、redis 4.0 之后增加了两个策略： volatile-lfu 、 allkeys-lfu            
               
