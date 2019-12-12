@@ -121,3 +121,64 @@
     6、volatile-ttl： 根据键值对象的ttl属性，删除最近将要过期数据。  
     7、redis 4.0 之后增加了两个策略： volatile-lfu 、 allkeys-lfu            
               
+### 15、什么是主从同步？  
+    1、Redis的主从同步机制，允许Slave从Master那里，通过网络传输拷贝到完整的数据备份，从而达到主从机制。  
+    2、主数据库可以进行读写操作，当发生写操作的时候自动将数据同步到从数据库，一般从数据库都是只读，并接收主数据库同步过来的数据。  
+    3、第一次同步时，主节点做一次 bgsave 操作，并同时将后续修改操作记录到内存 buffer ，待完成后将 RDB 文件全量同步到复制节点，复制节点接受完成后将 RDB 镜像加载到内存。加载完成后，再通知主节点将期间修改的操作记录同步到复制节点进行重放就完成了同步过程。  
+    
+### 16、简单的主从配置步骤
+    1、cp redis.conf redis6380.conf (复制一份端口位6380的配置文件)  
+    2、vim redis6380.conf  
+    3、修改port 6379 位 port 6380  
+    4、修改pidfile/var/run/redis_6379.pid 为 pidfile/var/run/redis_6380.pid  
+    5、在下面新增一条slaveof 192.168.32.88 6379  （192.168.32.88 为测试虚拟机的ip）
+    6、客户端连接6379新增一个变量，然后再6380中校验。简单的主从就配置完成了
+
+ 
+### 17、 Redis集群有哪些方案？  
+    1、Redis Sentinel  
+    2、Redis Cluster  
+    ...  
+    
+### 18、Redis Sentinel  
+    1、Redis Sentinel是一个分布式架构，其中包括若干个Sentinel节点和Redis数据节点  
+    
+![Sentinel架构](https://oscimg.oschina.net/oscnet/up-ff70e1012a355665ff9ec4cba0ab49a6b5f.png) 
+#### 实现原理  
+##### 三个定时任务  
+    1、每隔10s，每个Sentinel节点会向主节点和从节点发送info命令获取最新的拓补图。  
+    2、每隔2s，每隔Sentinel节点会向Redis数据节点的_sentinel_:hello频道发送该Sentinel节点对于主节点的判断以及Sentinel节点的信息。目的时发现新的Sentinel节点和作为客观下线以及领导者选举的依据。  
+    3、每隔1s，每隔Sentinel节点向主节点，从节点，其余Sentinel节点发送ping命令来确认节点是否可达。  
+    
+##### 主观下线和客观下线
+    1、主观下线 : 每隔1s，每隔Sentinel节点向主节点，从节点，其余Sentinel节点发送ping命令。当这些节点超过down-after-millseconds没有进行有效回复，Sentinel节点会对该节点做失败判定，这种行为被称为主观下线。  
+    2、客观下线 ：当Sentinel主观下线的节点是主节点时，Sentinel节点会通过sentinel is-master-down-by-addr命令向其他Sentinel节点询问判断，当超过<quorum>个数时，Sentinel认为该主节点确实存在问题，判定为客观下线。  
+
+##### 领导者Sentinel节点的选举
+    1、当判定为客观下线后，Sentinel节点之间会选举出一个Sentinel节点作为领导者进行故障转移的工作。Redis使用了Raft算法实现领导者选举。  
+    
+##### 故障转移
+    1、在从节点列表中选出一个节点作为新的主节点  
+    2、Sentinel领导者对选举出来的从节点执行slaveof no one命令，让它称为新主节点  
+    3、Sentinel领导者对其他的从节点发送命令，让他们称为新主节点的从节点，复制规则和parallel-syncs有关。（parallel-syncs控制同时有多少个从节点进行复制，最小为1.数字过大会造成主节点过多的IO消耗）  
+    4、Sentinel节点集合会将原来的主节点更新为从节点，并且当它恢复的时候，命令它去复制新的主节点  
+        
+    
+### 19、如何使用Redis实现消息队列
+    1、使用list结构作为队列，rpush生产消息，lpop消费消息，当lpop没有消息的时候，适当的sleep一会再试。  
+    2、如果对方追问可不可以不用 sleep 呢？list 还有个指令叫 blpop ，在没有消息的时候，它会阻塞住直到消息到来。  
+    3、如果对方追问能不能生产一次消费多次呢？使用 pub / sub 主题订阅者模式，可以实现 1:N 的消息队列。  
+    4、如果对方追问 pub / sub 有什么缺点？在消费者下线的情况下，生产的消息会丢失，得使用专业的消息队列如 rabbitmq 等。  
+    5、如果对方追问 redis 如何实现延时队列？我估计现在你很想把面试官一棒打死如果你手上有一根棒球棍的话，怎么问的这么详细。但是你很克制，然后神态自若的回答道：使用 sortedset ，拿时间戳作为 score ，消息内容作为 key 调用 zadd 来生产消息，消费者用 zrangebyscore 指令获取 N 秒之前的数据轮询进行处理  
+ 
+### 20、 Redis使用场景
+    1、数据缓存  
+    2、会话缓存  
+    3、时效性数据  
+    4、访问频率  
+    5、计数器  
+    6、社交列表  
+    7、热门列表与排行榜  
+    8、最新动态 
+    9、消息队列  
+    10、分布式锁     
