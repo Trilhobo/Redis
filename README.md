@@ -181,4 +181,8 @@
     7、热门列表与排行榜  
     8、最新动态 
     9、消息队列  
-    10、分布式锁     
+    10、分布式锁 
+    
+### 21、 Redis集群-Cluster  
+   [Redis-Cluster伪集群搭建](https://my.oschina.net/u/4055223/blog/3144545)
+ 
